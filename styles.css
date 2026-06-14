@@ -96,6 +96,18 @@ button.primary:hover,
   background: #62dfbb;
 }
 
+button.pause,
+.button.pause {
+  background: var(--warm);
+  border-color: var(--warm);
+  color: #191208;
+}
+
+button.pause:hover,
+.button.pause:hover {
+  background: #ffd57a;
+}
+
 button.danger,
 .button.danger {
   background: var(--danger-soft);

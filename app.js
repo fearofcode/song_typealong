@@ -703,10 +703,12 @@
     let lyricsReady = parseTimestamp(currentSong.startTimestamp) === 0;
     let started = false;
     let videoEnded = false;
+    let videoPlaying = false;
     let lyricComplete = tokens.length === 0;
     let intervalId = null;
     let player = null;
     let fallbackStartedAt = null;
+    let playbackButton = null;
     let hiddenWordInput = null;
 
     setActions([linkButton("Home", "#/", "ghost")]);
@@ -733,6 +735,7 @@
       lyricsReady = parseTimestamp(currentSong.startTimestamp) === 0;
       started = false;
       videoEnded = false;
+      videoPlaying = false;
       lyricComplete = tokens.length === 0;
       fallbackStartedAt = null;
 
@@ -756,6 +759,7 @@
         currentInput = hiddenWordInput.value;
         handleWordInput();
       });
+      playbackButton = button("Start", "primary", handlePlaybackToggle, !videoId);
       const lyricsScroll = el("div", { id: "lyrics-scroll", className: "lyrics-scroll" });
       const lyricsPane = el(
         "section",
@@ -793,7 +797,7 @@
             el(
               "div",
               { className: "inline-actions" },
-              button("Start", "primary", startPlayback, !videoId),
+              playbackButton,
               sidebarCompleteAction,
               linkButton("Edit song", `#/songs/${currentSong.id}/edit`, "ghost")
             )
@@ -811,11 +815,32 @@
           player = loadedPlayer;
           if (started && typeof player.playVideo === "function") {
             player.playVideo();
+            videoPlaying = true;
+            updatePlayerChrome();
           }
         });
       }
 
       renderLyrics();
+      updatePlayerChrome();
+    }
+
+    function handlePlaybackToggle() {
+      if (!started) {
+        startPlayback();
+        return;
+      }
+
+      if (!player) return;
+
+      if (videoPlaying && typeof player.pauseVideo === "function") {
+        player.pauseVideo();
+        videoPlaying = false;
+      } else if (!videoPlaying && typeof player.playVideo === "function") {
+        player.playVideo();
+        videoPlaying = true;
+      }
+
       updatePlayerChrome();
     }
 
@@ -830,6 +855,7 @@
 
       if (shouldPlayVideo && player && typeof player.playVideo === "function") {
         player.playVideo();
+        videoPlaying = true;
       }
 
       if (intervalId) window.clearInterval(intervalId);
@@ -985,6 +1011,8 @@
       const nextButtons = app.querySelectorAll("button");
       const nextSong = queue[queueIndex + 1] || null;
 
+      updatePlaybackButton();
+
       if (status) {
         status.textContent = videoEnded && lyricComplete ? "Video and lyrics complete" : "";
       }
@@ -1003,6 +1031,25 @@
       app.querySelectorAll("[data-complete-only]").forEach((candidate) => {
         candidate.hidden = !lyricComplete;
       });
+    }
+
+    function updatePlaybackButton() {
+      if (!playbackButton) return;
+
+      playbackButton.classList.remove("primary", "pause");
+      if (!started) {
+        playbackButton.textContent = "Start";
+        playbackButton.classList.add("primary");
+        return;
+      }
+
+      if (videoPlaying) {
+        playbackButton.textContent = "Pause";
+        playbackButton.classList.add("pause");
+      } else {
+        playbackButton.textContent = "Resume";
+        playbackButton.classList.add("primary");
+      }
     }
 
     function canTypeCurrentWord() {
@@ -1077,10 +1124,22 @@
               events: {
                 onReady: () => resolve(newPlayer),
                 onStateChange: (event) => {
-                  if (event.data === window.YT.PlayerState.PLAYING && !started) {
-                    startPlayback({ playVideo: false });
+                  if (event.data === window.YT.PlayerState.PLAYING) {
+                    videoPlaying = true;
+                    videoEnded = false;
+                    if (!started) {
+                      startPlayback({ playVideo: false });
+                    }
+                    updatePlayerChrome();
+                    return;
+                  }
+                  if (event.data === window.YT.PlayerState.PAUSED) {
+                    videoPlaying = false;
+                    updatePlayerChrome();
+                    return;
                   }
                   if (event.data === window.YT.PlayerState.ENDED) {
+                    videoPlaying = false;
                     videoEnded = true;
                     updatePlayerChrome();
                   }
