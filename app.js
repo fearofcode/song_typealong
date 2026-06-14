@@ -866,9 +866,9 @@
       );
 
       syncHiddenInput();
+      ensureCurrentLineVisible();
       window.requestAnimationFrame(() => {
         focusHiddenInput();
-        ensureCurrentLineVisible();
       });
 
       updatePlayerChrome();
@@ -1019,21 +1019,20 @@
 
       const target = currentLine.querySelector(".input-echo") || currentLine;
       const targetRect = target.getBoundingClientRect();
+      const lineRect = currentLine.getBoundingClientRect();
       const scrollRect = lyricsScroll.getBoundingClientRect();
       const padding = 28;
       const scrollable = lyricsScroll.scrollHeight > lyricsScroll.clientHeight + 1;
 
       if (scrollable) {
-        if (targetRect.bottom > scrollRect.bottom - padding) {
-          lyricsScroll.scrollBy({
-            top: targetRect.bottom - scrollRect.bottom + padding,
-            behavior: "smooth",
-          });
-        } else if (targetRect.top < scrollRect.top + padding) {
-          lyricsScroll.scrollBy({
-            top: targetRect.top - scrollRect.top - padding,
-            behavior: "smooth",
-          });
+        const visibleTop = scrollRect.top + padding;
+        const visibleBottom = scrollRect.bottom - padding;
+        const targetIsVisible = targetRect.top >= visibleTop && targetRect.bottom <= visibleBottom;
+        const pageTurnLine = scrollRect.top + lyricsScroll.clientHeight * 0.6;
+        const needsPageTurn = targetRect.bottom > pageTurnLine;
+
+        if (!targetIsVisible || needsPageTurn) {
+          lyricsScroll.scrollTop += lineRect.top - scrollRect.top - padding;
         }
         return;
       }
