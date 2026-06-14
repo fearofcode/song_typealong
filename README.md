@@ -4,7 +4,7 @@ Song Typealong is a small browser app for practicing lyrics while a YouTube song
 
 The app runs as plain static files: no build step, no install step, and no server-side code. Songs, lyrics, and playlists are stored in your browser's local storage. You can export your data to JSON and import it again later.
 
-Note that this app is not fully tested. In particular export and import have not been properly tested!
+Note that this app is not fully tested. In particular export and import have only briefly been tested.
 
 ## Run Locally
 
@@ -19,6 +19,8 @@ Then open:
 ```text
 http://localhost:8000/
 ```
+
+If you start the app on a different port, it won't load your previously saved localStorage data, so load on the same port every time for the persistence behavior you are probably expecting.
 
 If you have Node installed, this also works:
 

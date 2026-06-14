@@ -430,14 +430,13 @@
           startTimestamp: "00:00",
           lyrics: "",
         };
-    let savedSnapshot = stableStringify(draft);
-    let draftChanged = false;
+    let savedSnapshot = stableStringify(songDirtySnapshot(draft));
 
     setActions([linkButton("Home", "#/", "ghost")]);
 
     guard = {
       message: "Discard unsaved song changes?",
-      hasUnsaved: () => draftChanged && stableStringify(draft) !== savedSnapshot,
+      hasUnsaved: hasUnsavedSongChanges,
     };
 
     const titleInput = input({ value: draft.title, placeholder: "Song title", required: true });
@@ -517,12 +516,15 @@
             if (!data.songOrder.includes(nextSong.id)) data.songOrder.push(nextSong.id);
             saveData();
             Object.assign(draft, cloneSong(nextSong));
-            savedSnapshot = stableStringify(draft);
-            draftChanged = false;
+            savedSnapshot = stableStringify(songDirtySnapshot(draft));
             showToast("Song saved.");
             navigate(`#/songs/${draft.id}/edit`, { force: true });
           }),
           button("Discard", "ghost", () => {
+            if (!hasUnsavedSongChanges()) {
+              clearFieldErrors(songErrorFields);
+              return;
+            }
             if (!window.confirm("Discard unsaved song changes?")) return;
             const fresh = savedSong ? cloneSong(getSong(songId)) : {
               id: draft.id,
@@ -537,8 +539,7 @@
             timestampInput.value = draft.startTimestamp;
             lyricsInput.value = draft.lyrics;
             clearFieldErrors(songErrorFields);
-            draftChanged = false;
-            savedSnapshot = stableStringify(draft);
+            savedSnapshot = stableStringify(songDirtySnapshot(draft));
           }),
           savedSong
             ? button("Delete song", "danger", () => {
@@ -562,8 +563,16 @@
         draft[key] = field.value;
         const errorField = songErrorFields[key];
         if (errorField) clearFieldError(errorField.control, errorField.error);
-        draftChanged = true;
       });
+    }
+
+    function currentSongSnapshot() {
+      syncDraftFromFields();
+      return stableStringify(songDirtySnapshot(draft));
+    }
+
+    function hasUnsavedSongChanges() {
+      return currentSongSnapshot() !== savedSnapshot;
     }
 
     function syncDraftFromFields() {
@@ -1448,6 +1457,16 @@
       lyrics: song.lyrics,
       createdAt: song.createdAt || "",
       updatedAt: song.updatedAt || "",
+    };
+  }
+
+  function songDirtySnapshot(song) {
+    return {
+      id: song.id,
+      title: song.title,
+      youtubeUrl: song.youtubeUrl,
+      startTimestamp: song.startTimestamp,
+      lyrics: song.lyrics,
     };
   }
 
